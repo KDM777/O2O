@@ -7,6 +7,50 @@ import matplotlib.pylab as plt
 from PIL import Image, ImageFont, ImageDraw
 import json
 
+def compare_temp(img, folder_path):
+    # 입력이미지와 템플릿 이미지 읽기
+    th, tw = template.shape[:2]
+    cv2.imshow('template', template)
+
+    # 3가지 매칭 메서드 순회
+    methods=['cv2.TM_CCOEFF_NORMED']
+    #methods = ['cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR_NORMED', 'cv2.TM_SQDIFF_NORMED']
+    
+    templates = []
+    for root, _, files in os.walk(folder_path):
+        for file in files:
+            img_path = os.path.join(root, file)
+            templates.append(img_path)
+
+    res_total = []
+    similarity_scores = {}  # 딕셔너리로 유사도 저장
+    
+    for i, method_name in enumerate(methods):
+        img_draw = img.copy()
+        method = eval(method_name)
+        
+        for template_path in templates:
+            template=imread(template_path)
+        # 템플릿 매칭   ---①
+            res = cv2.matchTemplate(img, template, method)
+            # 최솟값, 최댓값과 그 좌표 구하기 ---②
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+            print(method_name, min_val, max_val, min_loc, max_loc)
+
+            # TM_SQDIFF의 경우 최솟값이 좋은 매칭, 나머지는 그 반대 ---③
+            if method in [cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED]:
+                top_left = min_loc
+                match_val = min_val
+            else:
+                top_left = max_loc
+                match_val = max_val
+            
+        # 유사도가 가장 높은 폴더 경로를 찾음
+        most_similar_folder = min(similarity_scores, key=similarity_scores.get)
+        # 폴더 이름 추출 (폴더 경로에서 마지막 폴더 이름만 추출)
+        predictName = os.path.basename(os.path.dirname(most_similar_folder))
+
+    return predictName
 
 def imread(filename, flags=cv2.IMREAD_COLOR, dtype=np.uint8): 
     try: 

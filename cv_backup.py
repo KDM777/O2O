@@ -5,6 +5,9 @@ import json
 import numpy as np
 import matplotlib.pylab as plt
 from PIL import Image, ImageFont, ImageDraw
+import json
+
+
 
 def imread(filename, flags=cv2.IMREAD_COLOR, dtype=np.uint8): 
     try: 
@@ -94,9 +97,46 @@ def compare_histograms(query_hist, folder_path, inputImageName):
     most_similar_folder = min(similarity_scores, key=similarity_scores.get)
     # 폴더 이름 추출 (폴더 경로에서 마지막 폴더 이름만 추출)
     predictName = os.path.basename(os.path.dirname(most_similar_folder))
-    #print(f"입력 이미지 이름: {inputImageName}, name_folder에 가장 유사도 높은 폴더 이름: {predictName}")
+    print(f"입력 이미지 이름: {inputImageName}, name_folder에 가장 유사도 높은 폴더 이름: {predictName}")
 
     return predictName
+def ver2(modify_img,folder_path):
+    input_hsv = cv2.cvtColor(modify_img, cv2.COLOR_BGR2HSV)
+    input_hist = cv2.calcHist([input_hsv], [0, 1], None, [180, 256], [0, 180, 0, 256])
+
+    imgs = []
+    for root, _, files in os.walk(folder_path):
+        for file in files:
+            img_path = os.path.join(root, file)
+            imgs.append(img_path)
+
+    hists = []
+    similarity_scores = {}  # 딕셔너리로 유사도 저장
+
+    for img_path in imgs:
+        img = imread(img_path)
+
+        # BGR 이미지를 HSV 이미지로 변환
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        # 히스토그램 연산(파라미터 순서 : 이미지, 채널, Mask, 크기, 범위)
+        hist = cv2.calcHist([hsv], [0, 1], None, [180, 256], [0, 180, 0, 256])
+        # 정규화(파라미터 순서 : 정규화 전 데이터, 정규화 후 데이터, 시작 범위, 끝 범위, 정규화 알고리즘)
+        #cv2.normalize(hist, hist, 0, 1, cv2.NORM_MINMAX)
+        # hists 리스트에 저장
+        hists.append(hist)
+
+        # 입력된 이미지와 폴더 내 이미지들 간의 히스토그램 비교 수행
+        ret = cv2.compareHist(input_hist, hist, cv2.HISTCMP_BHATTACHARYYA)
+        similarity_scores[img_path] = ret
+
+    # 유사도가 가장 높은 폴더 경로를 찾음
+    most_similar_folder = min(similarity_scores, key=similarity_scores.get)
+    # 폴더 이름 추출 (폴더 경로에서 마지막 폴더 이름만 추출)
+    predictName = os.path.basename(os.path.dirname(most_similar_folder))
+
+    return predictName
+
+snack_group=dict()
 
 def get_mouse_coordinates(event, x, y, flags, param):
     global drawing, start_x, start_y, end_x, end_y
@@ -108,14 +148,53 @@ def get_mouse_coordinates(event, x, y, flags, param):
     elif event == cv2.EVENT_LBUTTONUP:
         drawing = False
         end_x, end_y = x, y
-
+        mid_x=(start_x+end_x)//2
+        mid_y=(start_y+end_y)//2
         print(f"시작점 좌표: (x={start_x}, y={start_y})")
         print(f"끝점 좌표: (x={end_x}, y={end_y})")
+        print(f"중간 좌표: (x={mid_x}, y={mid_y})")
+        if start_x != end_x and start_y != end_y:
+            modify_img = img[start_y:end_y, start_x:end_x].copy()
+            predictName = ver2(modify_img, name_folder)
+            print(f"Predicted Name: {predictName}")
+            fontpath="C:/Users/iialab/Desktop/o2o/o2o_begin/fonts/gulim.ttc"
+            font=ImageFont.truetype(fontpath, 20)
+            img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+            draw=ImageDraw.Draw(img_pil)
+            draw.text((start_x, start_y - 10), predictName, font=font, fill=(0, 255, 0,2))
+            #draw.text((end_x, end_y - 10), predictName, font=font, fill=(0, 255, 0,2))
+            img_with_text = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
+            cv2.imshow('Object Detection', img_with_text)
+            cv2.waitKey(0)
+            
+            #json 파일 저장
+            snack=dict()
+            snack["mid_x"]=mid_x
+            snack["mid_y"]=mid_y
+            pred=str(predictName)
+            print(pred)
+            snack_group["%s"%(pred)]=snack
+
+            #json 파일로 저장
+            with open('C:/Users/iialab/Desktop/o2o/v1/db/test.json', 'w', encoding='utf-8') as make_file:
+                json.dump(snack_group, make_file, ensure_ascii=False, indent="\t")
+            
+            # 저장한 파일 출력하기
+            with open('C:/Users/iialab/Desktop/o2o/v1/db/test.json', 'r') as f:
+                json_data = json.load(f)
+            print(json.dumps(json_data, indent="\t") )
+
+
+
+    elif event == cv2.EVENT_MOUSEMOVE: # 마우스가 움직일 때 발생
+        if drawing:
+            temp_img = img.copy()
+            cv2.rectangle(temp_img, (start_x, start_y), (x, y), (0, 255, 0), 2)
+            cv2.imshow('Object Detection', temp_img)
 
 if __name__ == '__main__':
     model = YOLO('C:/Users/iialab/runs/detect/train17/weights/best.pt')  # 저장된 모델인 'best.pt' 로드
     test_folder='C:/Users/iialab/Desktop/o2o/shelf/image/'
-    # test_folder = 'C:/Users/iialab/Desktop/o2o/v1/test/images/'  # 테스트 이미지 폴더 경로
     name_folder='C:/Users/iialab/Desktop/o2o/v1/name/' #이름만 모아 놓은 곳
     
     
@@ -211,48 +290,22 @@ if __name__ == '__main__':
             cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
             #cv2.putText(img, f'{cls}: {confname:.2f}', (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2) 
             
-
             cls = "snack"
             cv2.rectangle(img, (left, top), (right, bottom), (0, 0, 255), 2)
             cv2.putText(img, f'{cls}: {confsnack:.2f}', (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2) 
             #cv2.putText(img, f'{predictName}', (x1, int((y1+y2)/2)), font, 0.9, (255, 255, 255), 2) 
-        #_1split
-
+        
         cv2.imshow('Object Detection', img)
         cv2.setMouseCallback('Object Detection', get_mouse_coordinates)
         drawing = False
         start_x, start_y, end_x, end_y = -1, -1, -1, -1
 
-        
-        if drawing:
-            temp_img = img.copy()
-            cv2.rectangle(temp_img, (start_x, start_y), (end_x, end_y), (0, 255, 0), 2)
-            cv2.imshow('Object Detection', temp_img)
-            modify_img=img[start_y:end_y, start_x:end_x].copy()        
-            input_hsv = cv2.cvtColor(modify_img, cv2.COLOR_BGR2HSV)
-            input_hist = cv2.calcHist([input_hsv], [0, 1], None, [180, 256], [0, 180, 0, 256])
-
-            predictName = compare_histograms(input_hist, name_folder, image_file)
-            
-        else:
-            cv2.imshow('Object Detection', img)
-        
-        '''
         while True:
-        # 이미지에 네모를 그릴 때
-            if drawing:
-                temp_img = img.copy()
-                cv2.rectangle(temp_img, (start_x, start_y), (end_x, end_y), (0, 255, 0), 2)
-                cv2.imshow('Object Detection', temp_img)
-            else:
-                cv2.imshow('Object Detection', img)
-
             key = cv2.waitKey(1) & 0xFF
             if key == 27:  # ESC 키를 누르면 종료
                 break
         
         cv2.waitKey(0)
-        '''
+
     cv2.destroyAllWindows()    
-    
     

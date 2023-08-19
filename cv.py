@@ -7,50 +7,7 @@ import matplotlib.pylab as plt
 from PIL import Image, ImageFont, ImageDraw
 import json
 
-def compare_temp(img, folder_path):
-    # 입력이미지와 템플릿 이미지 읽기
-    th, tw = template.shape[:2]
-    cv2.imshow('template', template)
 
-    # 3가지 매칭 메서드 순회
-    methods=['cv2.TM_CCOEFF_NORMED']
-    #methods = ['cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR_NORMED', 'cv2.TM_SQDIFF_NORMED']
-    
-    templates = []
-    for root, _, files in os.walk(folder_path):
-        for file in files:
-            img_path = os.path.join(root, file)
-            templates.append(img_path)
-
-    res_total = []
-    similarity_scores = {}  # 딕셔너리로 유사도 저장
-    
-    for i, method_name in enumerate(methods):
-        img_draw = img.copy()
-        method = eval(method_name)
-        
-        for template_path in templates:
-            template=imread(template_path)
-        # 템플릿 매칭   ---①
-            res = cv2.matchTemplate(img, template, method)
-            # 최솟값, 최댓값과 그 좌표 구하기 ---②
-            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-            print(method_name, min_val, max_val, min_loc, max_loc)
-
-            # TM_SQDIFF의 경우 최솟값이 좋은 매칭, 나머지는 그 반대 ---③
-            if method in [cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED]:
-                top_left = min_loc
-                match_val = min_val
-            else:
-                top_left = max_loc
-                match_val = max_val
-            
-        # 유사도가 가장 높은 폴더 경로를 찾음
-        most_similar_folder = min(similarity_scores, key=similarity_scores.get)
-        # 폴더 이름 추출 (폴더 경로에서 마지막 폴더 이름만 추출)
-        predictName = os.path.basename(os.path.dirname(most_similar_folder))
-
-    return predictName
 
 def imread(filename, flags=cv2.IMREAD_COLOR, dtype=np.uint8): 
     try: 
@@ -60,54 +17,7 @@ def imread(filename, flags=cv2.IMREAD_COLOR, dtype=np.uint8):
     except Exception as e: 
         print(e) 
         return None
-#파일 이름을 해서 비교할 때
-'''
-def compare_histograms(query_hist, folder_path,inputImageName):
-    imgs = os.listdir(folder_path)
-    
 
-    hists = []
-    similarity_scores_bha = []  # List to store similarity scores for each image
-    similarity_scores_int = []
-    similarity_scores_cor = []
-    imgs.sort()
-    #print(imgs)
-    for img_file in imgs:
-        img_path = os.path.join(folder_path, img_file)
-        img = imread(img_path)
-
-        # BGR 이미지를 HSV 이미지로 변환
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        # 히스토그램 연산(파라미터 순서 : 이미지, 채널, Mask, 크기, 범위)
-        hist = cv2.calcHist([hsv], [0, 1], None, [180, 256], [0, 180, 0, 256])
-        # 정규화(파라미터 순서 : 정규화 전 데이터, 정규화 후 데이터, 시작 범위, 끝 범위, 정규화 알고리즘)
-        cv2.normalize(hist, hist, 0, 1, cv2.NORM_MINMAX)
-        # hists 리스트에 저장
-        hists.append(hist)
-
-        # 입력된 이미지와 폴더 내 이미지들 간의 BHATTACHARYYA 히스토그램 비교 수행
-        ret = cv2.compareHist(query_hist, hist, cv2.HISTCMP_BHATTACHARYYA)
-        similarity_scores_bha.append(1-ret)
-
-        ret = cv2.compareHist(query_hist, hist, cv2.HISTCMP_INTERSECT )
-        similarity_scores_int.append(ret)
-
-        ret = cv2.compareHist(query_hist, hist, cv2.HISTCMP_CORREL )
-        similarity_scores_cor.append(ret)
-
-    voting = [0 for _ in range(int(523))] # 과자이름 최대 개수 입력 칸
-
-    for sol in [similarity_scores_bha,similarity_scores_int,similarity_scores_cor]:
-        max_score_idx = np.argmax(sol)
-        voting[max_score_idx] += 1
-
-    votidx = voting.index(max(voting))    
-    most_similar_image = imgs[votidx]
-    predictName = most_similar_image.split(" ")[0]    
-    print(f"입력 이미지 이름: {inputImageName}, name_folder에 가장 유사도 높은 이미지 이름: {predictName}")
-
-    return predictName
-'''
 #폴더 이름을 해서 비교할 때
 def compare_histograms(query_hist, folder_path, inputImageName):
     # 이미지 파일들을 재귀적으로 탐색하여 저장할 리스트
@@ -117,7 +27,6 @@ def compare_histograms(query_hist, folder_path, inputImageName):
             img_path = os.path.join(root, file)
             imgs.append(img_path)
 
-    hists = []
     similarity_scores = {}  # 딕셔너리로 유사도 저장
 
     for img_path in imgs:
@@ -129,20 +38,44 @@ def compare_histograms(query_hist, folder_path, inputImageName):
         hist = cv2.calcHist([hsv], [0, 1], None, [180, 256], [0, 180, 0, 256])
         # 정규화(파라미터 순서 : 정규화 전 데이터, 정규화 후 데이터, 시작 범위, 끝 범위, 정규화 알고리즘)
         #cv2.normalize(hist, hist, 0, 1, cv2.NORM_MINMAX)
-        # hists 리스트에 저장
-        hists.append(hist)
+        
 
         # 입력된 이미지와 폴더 내 이미지들 간의 히스토그램 비교 수행
-        ret = cv2.compareHist(query_hist, hist, cv2.HISTCMP_BHATTACHARYYA)
-        similarity_scores[img_path] = ret
+        ret_BHAT_list=[]
+        ret_CORREL_list=[]
+        ret_CHISQR_list=[]
+        ret_BHAT_list.append(1-cv2.compareHist(query_hist, hist, cv2.HISTCMP_BHATTACHARYYA))
+        ret_CORREL_list.append(cv2.compareHist(query_hist, hist, cv2.HISTCMP_CORREL))
+        ret_CHISQR_list.append(1-cv2.compareHist(query_hist, hist, cv2.HISTCMP_CHISQR))
+        #ret_list.append(cv2.compareHist(query_hist, hist, cv2.HISTCMP_INTERSECT))
+
+
+        ret_BHAT=max(ret_BHAT_list)
+        ret_CORREL=max(ret_CORREL_list)
+        ret_CHISQR=max(ret_CHISQR_list)
+        
+        
+        similarity_scores[img_path] = [ret_BHAT, ret_CORREL, ret_CHISQR]
 
     # 유사도가 가장 높은 폴더 경로를 찾음
-    most_similar_folder = min(similarity_scores, key=similarity_scores.get)
+    most_similar_folder=[]
+    most_similar_folder.append(max(similarity_scores, key=lambda k : similarity_scores[k][0]))
+    most_similar_folder.append(max(similarity_scores, key=lambda k : similarity_scores[k][1]))
+    most_similar_folder.append(max(similarity_scores, key=lambda k : similarity_scores[k][2]))
+
+    # 폴더에 겹치는 게 있으면 그걸로 predictName이 되는 거고 
+    predictName_back=max(most_similar_folder)
+    for i in range(3):
+        for j in range(3-i):
+            if(most_similar_folder[i]==most_similar_folder[j]):
+                predictName_back=most_similar_folder[i]
+
     # 폴더 이름 추출 (폴더 경로에서 마지막 폴더 이름만 추출)
-    predictName = os.path.basename(os.path.dirname(most_similar_folder))
+    predictName = os.path.basename(os.path.dirname(predictName_back))
     print(f"입력 이미지 이름: {inputImageName}, name_folder에 가장 유사도 높은 폴더 이름: {predictName}")
 
     return predictName
+
 def ver2(modify_img,folder_path):
     input_hsv = cv2.cvtColor(modify_img, cv2.COLOR_BGR2HSV)
     input_hist = cv2.calcHist([input_hsv], [0, 1], None, [180, 256], [0, 180, 0, 256])
@@ -220,7 +153,7 @@ def get_mouse_coordinates(event, x, y, flags, param):
 
             #json 파일로 저장
             with open('C:/Users/iialab/Desktop/o2o/v1/db/test.json', 'w', encoding='utf-8') as make_file:
-                json.dump(snack_group, make_file, ensure_ascii=False, indent="\t")
+                json.dump(snack_group, make_file, ensure_ascii=True, indent="\t") #true로해야 에러 안뜸 근데 False로 해야 한글로 써짐
             
             # 저장한 파일 출력하기
             with open('C:/Users/iialab/Desktop/o2o/v1/db/test.json', 'r') as f:

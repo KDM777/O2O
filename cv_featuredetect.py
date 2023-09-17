@@ -10,36 +10,37 @@ import json
 import cv2
 import os
 
-def compare_ftdetect(img, folder_path, using_FAST=True):
+def compare_ftdetect(img, folder_path):
+    #특징점 검출기를 정의, 여기에서 SIFT만 사용
     feature_detector = {
-        'SIFT': cv2.SIFT_create(),
-        
+        'SIFT': cv2.SIFT_create(nfeatures=100),
     }
 
+    # 폴더 내의 모든 이미지 파일 경로 수집
     template_paths = []
     for root, _, files in os.walk(folder_path):
         for file in files:
             img_path = os.path.join(root, file)
             template_paths.append(img_path)
-
+    
+    #유사도 점수 저장할 딕셔너리 초기화
     similarity_scores = {}
 
     for detector_type, detector in feature_detector.items():
         for template_path in template_paths:
             img2 = imread(template_path)
             img2 = cv2.resize(img2, (640, 640))
-
-            kp1, des1 = detector.compute(img, None)
+            # 주어진 이미지와 템플릿 이미지의 특징점 및 디스크립터를 계산
+            kp1, des1 = detector.compute(img, None) # 마스크를 사용하지 않아서 None
             kp2, des2 = detector.compute(img2, None)
-
-
-            matcher = cv2.BFMatcher()
+            img_draw = cv2.drawKeypoints(img, kp1, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+            matcher = cv2.BFMatcher() #Brute-Force Mathcer를 생성하고 디스크립터 매칭
             
             matches = matcher.match(des1, des2)
             matches = sorted(matches, key=lambda x: x.distance)
             good_matches = matches[:30]
-            similarity_scores[template_path] = len(good_matches)
-
+            similarity_scores[template_path] = len(good_matches) # 템플릿 이미지의 경로를 기반으로 유사도 점수를 저장
+    cv2.imshow('sift', img_draw)
     most_similar_template = max(similarity_scores, key=similarity_scores.get)
     most_similar_folder = os.path.dirname(most_similar_template)
     predictName = os.path.basename(most_similar_folder)
@@ -112,8 +113,10 @@ def get_mouse_coordinates(event, x, y, flags, param):
             cv2.imshow('Object Detection', temp_img)
 
 if __name__ == '__main__':
-    model = YOLO('C:/Users/iialab/runs/detect/train17/weights/best.pt')  # 저장된 모델인 'best.pt' 로드
-    test_folder='C:/Users/iialab/Desktop/o2o/shelf/image/'
+    #model = YOLO('C:/Users/iialab/runs/detect/train17/weights/best.pt')  # 저장된 모델인 'best.pt' 로드
+    model = YOLO('C:/Users/iialab/Desktop/o2o/v4/runs/detect/train/weights/best.pt')
+
+    test_folder='C:/Users/iialab/Desktop/o2o/shelf_v1/im2/'
     name_folder='C:/Users/iialab/Desktop/o2o/v1/name/' #이름만 모아 놓은 곳
     
     
@@ -144,7 +147,7 @@ if __name__ == '__main__':
         for pred in results_dict:
             cls = int(pred['class'])
             conf = pred['confidence']
-            if cls == 0:
+            if cls == 1:
                 x1 = int(pred['box']['x1'])
                 y1 = int(pred['box']['y1'])
                 x2 = int(pred['box']['x2'])
@@ -158,7 +161,7 @@ if __name__ == '__main__':
             cls = int(pred['class'])
             conf = pred['confidence']
                 
-            if cls == 1:
+            if cls == 0:
                 x1 = int(pred['box']['x1'])
                 y1 = int(pred['box']['y1'])
                 x2 = int(pred['box']['x2'])

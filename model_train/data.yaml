@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 1
+names: ['product']
+
+roboflow:
+  workspace: kumoh-g9cxa
+  project: add_middle_3
+  version: 4
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/kumoh-g9cxa/add_middle_3/dataset/4

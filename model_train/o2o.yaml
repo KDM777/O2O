@@ -1,0 +1,6 @@
+names:
+- product
+nc: 1
+test: C:/Users/iialab/Desktop/o2o/v6/test/images
+train: C:/Users/iialab/Desktop/o2o/v6/train/images/
+val: C:/Users/iialab/Desktop/o2o/v6/valid/images/

@@ -113,11 +113,6 @@ if __name__ == '__main__':
             bottom = snack_dict[snack][1][1]
             modify_img = img[top:bottom, left:right].copy()
             
-            
-            # width=int(modify_img.shape[1]/1.5)
-            # height=int(modify_img.shape[0]/1.5)
-            # new_img = cv2.resize(modify_img, (width, height))
-            
             predictName = compare_ftdetect(modify_img, name_folder)
             
             # x1, y1 정의

@@ -68,7 +68,7 @@ def imread(filename, flags=cv2.IMREAD_COLOR, dtype=np.uint8):
 snack_group=dict()
 
 if __name__ == '__main__':
-    model = YOLO('C:/Users/iialab/Desktop/o2o/v6/runs/detect/train/weights/best.pt')
+    model = YOLO('../train_result/train12/weights/best.pt')
     test_folder = 'C:/Users/iialab/Desktop/o2o/god/test/images/'
     name_folder = 'C:/Users/iialab/Desktop/o2o/total_ramen_name_rm/'  # 이름만 모아 놓은 곳
     #name_folder = 'C:/Users/iialab/Desktop/o2o/total_name_2/'  # 이름만 모아 놓은 곳
